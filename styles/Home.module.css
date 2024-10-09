@@ -34,18 +34,11 @@
 }
 
 .videoCard {
-  background-color: #ffffff;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  transform: scale(1);
+  @apply bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md transition-all duration-300 ease-in-out transform scale-100 border-1.5 border-black;
 }
 
 .videoCard:hover {
-  box-shadow: 0 0 0 9px rgba(128, 90, 213, 0.5), 0 4px 6px rgba(0, 0, 0, 0.1);
-  transform: scale(1.05);
-  z-index: 1;
+  @apply shadow-purple-glow scale-105 z-10;
 }
 
 .videoContainer {

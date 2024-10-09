@@ -78,22 +78,34 @@ const formatDate = (timestamp) => {
 };
 
 export default function Home({ outliers }) {
-  const videoRefs = useRef([]);
+  const videoRefs = useRef({});
   const [sortedOutliers, setSortedOutliers] = useState(outliers);
   const [sortBy, setSortBy] = useState('viralScore');
+  const [timeframe, setTimeframe] = useState(30); // Default to 30 days (1M)
 
   useEffect(() => {
-    videoRefs.current = videoRefs.current.slice(0, outliers.length);
-  }, [outliers]);
+    // Clean up old refs that are no longer in the sorted list
+    Object.keys(videoRefs.current).forEach(key => {
+      if (!sortedOutliers.find(outlier => outlier.post_id === key)) {
+        delete videoRefs.current[key];
+      }
+    });
+  }, [sortedOutliers]);
 
   useEffect(() => {
-    const sortOutliers = () => {
-      const sorted = [...outliers].sort((a, b) => {
+    const sortAndFilterOutliers = () => {
+      const now = new Date();
+      const filtered = outliers.filter(outlier => {
+        const postDate = new Date(outlier.timestamp);
+        const daysDifference = (now - postDate) / (1000 * 60 * 60 * 24);
+        return daysDifference <= timeframe;
+      });
+
+      const sorted = filtered.sort((a, b) => {
         switch (sortBy) {
           case 'viralScore':
             return b.outlier_score - a.outlier_score;
           case 'postDate':
-            // Sort by timestamp, newest first
             return new Date(b.timestamp) - new Date(a.timestamp);
           case 'views':
             return b.views - a.views;
@@ -108,12 +120,12 @@ export default function Home({ outliers }) {
       setSortedOutliers(sorted);
     };
 
-    sortOutliers();
-  }, [sortBy, outliers]);
+    sortAndFilterOutliers();
+  }, [sortBy, outliers, timeframe]);
 
-  const handlePlay = (index) => {
-    videoRefs.current.forEach((videoRef, i) => {
-      if (i !== index && !videoRef.paused) {
+  const handlePlay = (postId) => {
+    Object.entries(videoRefs.current).forEach(([key, videoRef]) => {
+      if (key !== postId && videoRef && !videoRef.paused) {
         videoRef.pause();
       }
     });
@@ -122,6 +134,23 @@ export default function Home({ outliers }) {
   const handleSortChange = (e) => {
     setSortBy(e.target.value);
   };
+
+  const handleTimeframeChange = (days) => {
+    setTimeframe(days);
+  };
+
+  const TimeframeButton = ({ days, label }) => (
+    <button
+      onClick={() => handleTimeframeChange(days)}
+      className={`px-3 py-1 rounded-md text-sm font-medium mr-2 ${
+        timeframe === days
+          ? 'bg-purple-500 text-white'
+          : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+      }`}
+    >
+      {label}
+    </button>
+  );
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-white">
@@ -134,7 +163,13 @@ export default function Home({ outliers }) {
       <MenuBar />
 
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-6 flex justify-end">
+        <div className="mb-6 flex flex-wrap justify-between items-center">
+          <div className="flex items-center mb-2 sm:mb-0">
+            <TimeframeButton days={7} label="Last 7D" />
+            <TimeframeButton days={14} label="Last 14D" />
+            <TimeframeButton days={30} label="Last 1M" />
+            <TimeframeButton days={90} label="Last 3M" />
+          </div>
           <select
             className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
             value={sortBy}
@@ -149,15 +184,19 @@ export default function Home({ outliers }) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedOutliers.map((outlier, index) => (
-            <div key={outlier.post_id} className={`${styles.videoCard} hover:animate-pop-up transition-all duration-300`}>
+          {sortedOutliers.map((outlier) => (
+            <div key={outlier.post_id} className={`${styles.videoCard} transition-all duration-100`}>
               <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden">
                 <video 
-                  ref={el => videoRefs.current[index] = el}
+                  ref={el => {
+                    if (el) {
+                      videoRefs.current[outlier.post_id] = el;
+                    }
+                  }}
                   controls 
                   poster={outlier.cover_url}
                   className="object-cover w-full h-full"
-                  onPlay={() => handlePlay(index)}
+                  onPlay={() => handlePlay(outlier.post_id)}
                 >
                   <source src={outlier.video_url} type="video/mp4" />
                   Your browser does not support the video tag.

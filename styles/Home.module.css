@@ -34,11 +34,13 @@
 }
 
 .videoCard {
-  @apply bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md transition-all duration-300 ease-in-out transform scale-100 border-1.5 border-black;
+  @apply bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md transition-all duration-100 ease-in-out transform scale-100 border-1.5 border-black;
 }
 
 .videoCard:hover {
-  @apply shadow-purple-glow scale-105 z-10;
+  @apply shadow-purple-glow z-10;
+  transform: scale(1.02);
+  animation: pop-up 0.1s ease-out forwards;
 }
 
 .videoContainer {

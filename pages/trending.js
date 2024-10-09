@@ -5,22 +5,115 @@ import { useTheme } from 'next-themes';
 import MenuBar from '../src/components/MenuBar';
 import { Pool } from 'pg';
 
+const formatNumber = (num) => {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1) + 'M';
+  } else if (num >= 1000) {
+    return (num / 1000).toFixed(1) + 'K';
+  } else {
+    return num.toString();
+  }
+};
+
+const formatDate = (timestamp) => {
+  if (!timestamp) return 'No date';
+  const date = new Date(timestamp);
+  return date.toLocaleString('en-US', {
+    timeZone: 'America/Chicago',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+};
+
 export default function TrendingPosts({ outliers }) {
-  const videoRefs = useRef([]);
+  const videoRefs = useRef({});
   const { theme, setTheme } = useTheme();
+  const [sortedOutliers, setSortedOutliers] = useState(outliers);
+  const [sortBy, setSortBy] = useState('viralScore');
+  const [timeframe, setTimeframe] = useState(30); // Default to 30 days (1M)
+  const [selectedOutlier, setSelectedOutlier] = useState(null);
+  const [currentVideoTime, setCurrentVideoTime] = useState(0);
 
   useEffect(() => {
-    videoRefs.current = videoRefs.current.slice(0, outliers.length);
     setTheme('dark'); // Set dark theme by default
-  }, [outliers, setTheme]);
+  }, [setTheme]);
 
-  const handlePlay = (index) => {
-    videoRefs.current.forEach((videoRef, i) => {
-      if (i !== index && !videoRef.paused) {
+  useEffect(() => {
+    const sortAndFilterOutliers = () => {
+      const now = new Date();
+      const filtered = outliers.filter(outlier => {
+        const postDate = new Date(outlier.timestamp);
+        const daysDifference = (now - postDate) / (1000 * 60 * 60 * 24);
+        return daysDifference <= timeframe;
+      });
+
+      const sorted = filtered.sort((a, b) => {
+        switch (sortBy) {
+          case 'viralScore':
+            return b.outlier_score - a.outlier_score;
+          case 'postDate':
+            return new Date(b.timestamp) - new Date(a.timestamp);
+          case 'views':
+            return b.views - a.views;
+          case 'likes':
+            return b.likes - a.likes;
+          case 'username':
+            return a.owner_username.localeCompare(b.owner_username);
+          default:
+            return 0;
+        }
+      });
+      setSortedOutliers(sorted);
+    };
+
+    sortAndFilterOutliers();
+  }, [sortBy, outliers, timeframe]);
+
+  const handlePlay = (postId) => {
+    Object.entries(videoRefs.current).forEach(([key, videoRef]) => {
+      if (key !== postId && videoRef && !videoRef.paused) {
         videoRef.pause();
       }
     });
   };
+
+  const handleSortChange = (e) => {
+    setSortBy(e.target.value);
+  };
+
+  const handleTimeframeChange = (days) => {
+    setTimeframe(days);
+  };
+
+  const handleInfoClick = (outlier) => {
+    const videoRef = videoRefs.current[outlier.post_id];
+    if (videoRef) {
+      setCurrentVideoTime(videoRef.currentTime);
+      if (!videoRef.paused) {
+        videoRef.pause();
+      }
+    }
+    setSelectedOutlier(outlier);
+  };
+
+  const closePopup = () => {
+    setSelectedOutlier(null);
+    setCurrentVideoTime(0);
+  };
+
+  const TimeframeButton = ({ days, label }) => (
+    <button
+      onClick={() => handleTimeframeChange(days)}
+      className={`px-3 py-1 rounded-md text-sm font-medium mr-2 ${
+        timeframe === days
+          ? 'bg-blue-400 text-white'
+          : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+      }`}
+    >
+      {label}
+    </button>
+  );
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-white">
@@ -33,32 +126,156 @@ export default function TrendingPosts({ outliers }) {
       <MenuBar />
 
       <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {outliers.map((outlier, index) => (
-            <div key={outlier.post_id} className="bg-gray-100 dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-              <div className="aspect-w-16 aspect-h-9">
+        <div className="mb-6 flex flex-wrap justify-between items-center">
+          <div className="flex items-center mb-2 sm:mb-0">
+            <TimeframeButton days={7} label="Last 7D" />
+            <TimeframeButton days={14} label="Last 14D" />
+            <TimeframeButton days={30} label="Last 1M" />
+            <TimeframeButton days={90} label="Last 3M" />
+          </div>
+          <div className="relative">
+            <select
+              className="appearance-none bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              value={sortBy}
+              onChange={handleSortChange}
+            >
+              <option value="viralScore">Sort by Viral Score</option>
+              <option value="postDate">Sort by Post Date (Newest)</option>
+              <option value="views">Sort by Views</option>
+              <option value="likes">Sort by Likes</option>
+              <option value="username">Sort by Username</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-300">
+              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {sortedOutliers.map((outlier) => (
+            <div key={outlier.post_id} className={`${styles.videoCard} bg-gray-100 dark:bg-gray-800 rounded-lg shadow-md overflow-hidden`}>
+              <div className="relative w-full pt-[177.78%]">
                 <video 
-                  ref={el => videoRefs.current[index] = el}
+                  ref={el => {
+                    if (el) {
+                      videoRefs.current[outlier.post_id] = el;
+                    }
+                  }}
                   controls 
                   poster={outlier.cover_url}
-                  className="object-cover w-full h-full"
-                  onPlay={() => handlePlay(index)}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onPlay={() => handlePlay(outlier.post_id)}
+                  playsInline
+                  preload="metadata"
                 >
                   <source src={outlier.video_url} type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
               </div>
-              <div className="p-4">
-                <h2 className="font-bold text-lg mb-2">{outlier.owner_username}</h2>
-                <div className="flex justify-between text-sm">
-                  <span>ViralScore: {outlier.outlier_score ? outlier.outlier_score.toFixed(2) : 'N/A'}</span>
-                  <span>Views: {outlier.views ? outlier.views.toLocaleString() : 'N/A'}</span>
-                  <span>Likes: {outlier.likes ? outlier.likes.toLocaleString() : 'N/A'}</span>
+              <div className="p-3 text-sm">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                    {formatDate(outlier.timestamp)}
+                  </span>
+                  <div className="bg-blue-500 dark:bg-blue-600 text-white rounded-md px-2 py-1 text-center">
+                    <span className="font-bold text-sm">{outlier.outlier_score.toFixed(1)}x</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="font-bold truncate text-base text-gray-900 dark:text-white">@{outlier.owner_username}</h2>
+                  <button 
+                    className="bg-green-500 dark:bg-white text-white dark:text-gray-800 rounded-md px-2 py-1 text-center text-xs font-semibold border border-green-600 dark:border-gray-300"
+                    onClick={() => handleInfoClick(outlier)}
+                  >
+                    INFO
+                  </button>
+                </div>
+                <div className="flex justify-between items-center space-x-2">
+                  <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-md px-2 py-1 text-center">
+                    <span className="text-gray-800 dark:text-gray-200 font-medium text-xs">
+                      Views: {formatNumber(outlier.views)}
+                    </span>
+                  </div>
+                  <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-md px-2 py-1 text-center">
+                    <span className="text-gray-800 dark:text-gray-200 font-medium text-xs">
+                      Likes: {formatNumber(outlier.likes)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
+
+        {/* Updated Pop-up window */}
+        {selectedOutlier && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 animate-fadeIn">
+            <div className="bg-gradient-to-br from-white via-blue-50 to-purple-50 dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-5xl animate-scaleIn">
+              <div className="flex flex-col md:flex-row">
+                <div className="w-full md:w-1/2">
+                  <video 
+                    controls 
+                    className="w-full h-full object-cover rounded-l-lg"
+                    poster={selectedOutlier.cover_url}
+                    ref={(el) => {
+                      if (el) {
+                        el.currentTime = currentVideoTime;
+                        if (currentVideoTime > 0) {
+                          el.play();
+                        }
+                      }
+                    }}
+                  >
+                    <source src={selectedOutlier.video_url} type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+                <div className="w-full md:w-1/2 p-6 bg-white bg-opacity-80 dark:bg-gray-800 dark:bg-opacity-80 rounded-r-lg">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">@{selectedOutlier.owner_username}</h2>
+                    <button 
+                      className="text-gray-400 hover:text-white"
+                      onClick={closePopup}
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="flex justify-between mb-4 text-gray-700 dark:text-gray-300">
+                    <span>👁 {formatNumber(selectedOutlier.views)}</span>
+                    <span>❤️ {formatNumber(selectedOutlier.likes)}</span>
+                    <span>💬 {formatNumber(selectedOutlier.comments || 0)}</span>
+                  </div>
+                  <p className="mb-4 text-gray-700 dark:text-gray-300">{selectedOutlier.caption}</p>
+                  <a 
+                    href={selectedOutlier.link} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-blue-400 hover:underline block mb-4"
+                  >
+                    Instagram Post
+                  </a>
+                  <button className="w-full bg-white text-gray-900 font-bold py-2 px-4 rounded mb-2">
+                    User Profile and Posts
+                  </button>
+                  <button className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+                    Add to Database
+                  </button>
+                  <div className="mt-4 text-gray-700 dark:text-gray-300">
+                    <h3 className="font-bold mb-2">User Stats</h3>
+                    <p>Username: {selectedOutlier.owner_username}</p>
+                    <p>Follower Count: {formatNumber(selectedOutlier.follower_count || 0)}</p>
+                    <p>14-Day Avg View Count: {formatNumber(selectedOutlier.avg_view_count || 0)}</p>
+                    <p>Avg Like Count: {formatNumber(selectedOutlier.avg_like_count || 0)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       <footer className="text-center py-4 bg-gray-100 dark:bg-gray-800">
@@ -87,11 +304,10 @@ export async function getServerSideProps() {
     const client = await pool.connect();
     const result = await client.query(`
       SELECT post_id, owner_username, outlier_score, video_s3_url, cover_s3_url, 
-             video_play_count, likes_count, caption, url
+             video_play_count, likes_count, caption, url, timestamp
       FROM outlier_posts
       WHERE status = 'approved'
       ORDER BY outlier_score DESC
-      LIMIT 20
     `);
     client.release();
 
@@ -104,7 +320,8 @@ export async function getServerSideProps() {
       views: parseInt(row.video_play_count),
       likes: parseInt(row.likes_count),
       caption: row.caption,
-      link: row.url
+      link: row.url,
+      timestamp: row.timestamp ? row.timestamp.toISOString() : null
     }));
 
     return { props: { outliers } };

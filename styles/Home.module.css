@@ -38,7 +38,7 @@
 }
 
 .videoCard:hover {
-  @apply shadow-purple-glow z-10;
+  @apply shadow-blue-glow z-10; /* Changed to blue-glow */
   transform: scale(1.02);
   animation: pop-up 0.1s ease-out forwards;
 }
@@ -133,4 +133,44 @@
   .grid {
     grid-template-columns: 1fr;
   }
+}
+
+.mobileVideo::-webkit-media-controls-start-playback-button {
+  display: none !important;
+  -webkit-appearance: none;
+}
+
+.videoOverlay {
+  z-index: 1;
+}
+
+@media (hover: none) {
+  .mobileVideo::-webkit-media-controls-panel {
+    display: flex !important;
+    opacity: 1 !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .mobileVideo::-webkit-media-controls-panel {
+    bottom: 0;
+    position: absolute;
+    background: rgba(0, 0, 0, 0.5);
+    width: 100%;
+  }
+}
+
+/* Add these styles at the end of your existing CSS file */
+
+.select-wrapper {
+  position: relative;
+}
+
+.select-wrapper select:hover {
+  border-color: #a0aec0;
+}
+
+.select-wrapper select:focus {
+  border-color: #3182ce;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
 }

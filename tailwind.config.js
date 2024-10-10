@@ -56,7 +56,10 @@ module.exports = {
       },
       maxWidth: {
         '4xl': '56rem', // Adjusted to better fit the popup
-      }
+      },
+      backdropBlur: {
+        sm: '4px',
+      },
     },
   },
   variants: {

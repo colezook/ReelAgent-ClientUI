@@ -38,7 +38,7 @@ const MenuBar = () => {
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <Link href="/trending" className="text-2xl font-bold text-gray-800 dark:text-white">
-                VBrain
+                V-Brain Alpha 1.0
               </Link>
             </div>
             <div className="hidden md:block">

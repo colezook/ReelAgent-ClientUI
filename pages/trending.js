@@ -145,7 +145,7 @@ export default function TrendingPosts({ outliers }) {
 
       <MenuBar />
 
-      <main className="container mx-auto px-4 py-8">
+      <main className={`container mx-auto px-4 py-8 ${selectedOutlier ? 'blur-sm' : ''}`}>
         <div className="mb-6 flex flex-wrap justify-between items-center">
           <div className="flex items-center mb-2 sm:mb-0">
             <TimeframeButton days={7} label="Last 7D" />
@@ -228,80 +228,9 @@ export default function TrendingPosts({ outliers }) {
             </div>
           ))}
         </div>
-
-        {/* Updated Pop-up window */}
-        {selectedOutlier && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 animate-fadeIn popup-overlay"
-            onClick={handleOutsideClick}
-          >
-            <div className="bg-gradient-to-br from-white via-blue-50 to-purple-50 dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-5xl animate-scaleIn overflow-hidden">
-              <div className="flex flex-col md:flex-row">
-                <div className="w-full md:w-1/2 relative">
-                  <video 
-                    controls 
-                    className="w-full h-full object-cover"
-                    poster={selectedOutlier.cover_url}
-                    ref={(el) => {
-                      if (el) {
-                        el.currentTime = currentVideoTime;
-                        if (currentVideoTime > 0) {
-                          el.play();
-                        }
-                      }
-                    }}
-                  >
-                    <source src={selectedOutlier.video_url} type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
-                </div>
-                <div className="w-full md:w-1/2 p-6 bg-white bg-opacity-80 dark:bg-gray-800 dark:bg-opacity-80 relative">
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">@{selectedOutlier.owner_username}</h2>
-                    <button 
-                      className="text-gray-400 hover:text-gray-600 dark:hover:text-white"
-                      onClick={closePopup}
-                    >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="flex justify-between mb-4">
-                    <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-md px-2 py-1 text-center mr-2">
-                      <span className="text-gray-800 dark:text-gray-200 font-medium text-sm">
-                        👁 Views: {formatNumber(selectedOutlier.views)}
-                      </span>
-                    </div>
-                    <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-md px-2 py-1 text-center ml-2">
-                      <span className="text-gray-800 dark:text-gray-200 font-medium text-sm">
-                        ❤️ Likes: {formatNumber(selectedOutlier.likes)}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="mb-4 text-gray-700 dark:text-gray-300">{selectedOutlier.caption}</p>
-                  <div className="bg-blue-500 dark:bg-blue-600 text-white rounded-md px-2 py-1 text-center inline-block">
-                    <span className="font-bold text-sm">{selectedOutlier.outlier_score.toFixed(1)}x</span>
-                  </div>
-                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    Posted on: {formatDate(selectedOutlier.timestamp)}
-                  </div>
-                  {/* Cover photo */}
-                  <div className="absolute bottom-6 left-6 w-1/3 aspect-w-1 aspect-h-1 rounded-lg overflow-hidden shadow-md">
-                    <img 
-                      src={selectedOutlier.cover_url} 
-                      alt="Cover" 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </main>
 
-      <footer className="text-center py-4 bg-gray-100 dark:bg-gray-800">
+      <footer className={`text-center py-4 bg-gray-100 dark:bg-gray-800 ${selectedOutlier ? 'blur-sm' : ''}`}>
         <a
           href="https://your-company-website.com"
           target="_blank"
@@ -311,6 +240,77 @@ export default function TrendingPosts({ outliers }) {
           Powered by Viral Brain
         </a>
       </footer>
+
+      {/* Updated Pop-up window */}
+      {selectedOutlier && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn popup-overlay"
+          onClick={handleOutsideClick}
+        >
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-5xl animate-scaleIn overflow-hidden">
+            <div className="flex flex-col md:flex-row">
+              <div className="w-full md:w-1/2 relative">
+                <video 
+                  controls 
+                  className="w-full h-full object-cover"
+                  poster={selectedOutlier.cover_url}
+                  ref={(el) => {
+                    if (el) {
+                      el.currentTime = currentVideoTime;
+                      if (currentVideoTime > 0) {
+                        el.play();
+                      }
+                    }
+                  }}
+                >
+                  <source src={selectedOutlier.video_url} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+              <div className="w-full md:w-1/2 p-6 bg-white dark:bg-gray-800 relative">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">@{selectedOutlier.owner_username}</h2>
+                  <button 
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                    onClick={closePopup}
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="flex justify-between mb-4">
+                  <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-md px-2 py-1 text-center mr-2">
+                    <span className="text-gray-800 dark:text-gray-200 font-medium text-sm">
+                      👁 Views: {formatNumber(selectedOutlier.views)}
+                    </span>
+                  </div>
+                  <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-md px-2 py-1 text-center ml-2">
+                    <span className="text-gray-800 dark:text-gray-200 font-medium text-sm">
+                      ❤️ Likes: {formatNumber(selectedOutlier.likes)}
+                    </span>
+                  </div>
+                </div>
+                <p className="mb-4 text-gray-700 dark:text-gray-300">{selectedOutlier.caption}</p>
+                <div className="bg-blue-500 dark:bg-blue-600 text-white rounded-md px-2 py-1 text-center inline-block">
+                  <span className="font-bold text-sm">{selectedOutlier.outlier_score.toFixed(1)}x</span>
+                </div>
+                <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  Posted on: {formatDate(selectedOutlier.timestamp)}
+                </div>
+                {/* Cover photo */}
+                <div className="absolute bottom-6 left-6 w-1/3 aspect-w-1 aspect-h-1 rounded-lg overflow-hidden shadow-md">
+                  <img 
+                    src={selectedOutlier.cover_url} 
+                    alt="Cover" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

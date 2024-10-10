@@ -45,7 +45,7 @@ module.exports = {
         'scaleIn': 'scaleIn 0.3s ease-out',
       },
       boxShadow: {
-        'blue-glow': '0 0 15px 5px rgba(96, 165, 250, 0.3)',
+        'blue-glow': '0 0 20px 7px rgba(59, 130, 246, 0.8)', // Reduced size by 50%
       },
       borderWidth: {
         '3': '3px',

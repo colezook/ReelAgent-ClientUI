@@ -247,7 +247,7 @@ export default function TrendingPosts({ outliers }) {
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn popup-overlay"
           onClick={handleOutsideClick}
         >
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-5xl animate-scaleIn overflow-hidden">
+          <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-5xl animate-scaleIn overflow-hidden shadow-blue-glow">
             <div className="flex flex-col md:flex-row">
               <div className="w-full md:w-1/2 relative">
                 <video 

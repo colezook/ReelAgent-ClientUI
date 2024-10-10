@@ -119,12 +119,16 @@ export default function TrendingPosts({ outliers }) {
   );
 
   const handleInfoClick = (outlier) => {
+    // Pause all playing videos
+    Object.values(videoRefs.current).forEach((videoRef) => {
+      if (videoRef && !videoRef.paused) {
+        videoRef.pause();
+      }
+    });
+
     const videoRef = videoRefs.current[outlier.post_id];
     if (videoRef) {
       setCurrentVideoTime(videoRef.currentTime);
-      if (!videoRef.paused) {
-        videoRef.pause();
-      }
     }
     setSelectedOutlier(outlier);
   };

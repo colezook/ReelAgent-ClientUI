@@ -70,6 +70,20 @@ export default function TrendingPosts({ outliers }) {
     sortAndFilterOutliers();
   }, [sortBy, outliers, timeframe]);
 
+  useEffect(() => {
+    const handleEscapeKey = (event) => {
+      if (event.key === 'Escape') {
+        closePopup();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, []);
+
   const handlePlay = (postId) => {
     Object.entries(videoRefs.current).forEach(([key, videoRef]) => {
       if (key !== postId && videoRef && !videoRef.paused) {
@@ -84,17 +98,6 @@ export default function TrendingPosts({ outliers }) {
 
   const handleTimeframeChange = (days) => {
     setTimeframe(days);
-  };
-
-  const handleInfoClick = (outlier) => {
-    const videoRef = videoRefs.current[outlier.post_id];
-    if (videoRef) {
-      setCurrentVideoTime(videoRef.currentTime);
-      if (!videoRef.paused) {
-        videoRef.pause();
-      }
-    }
-    setSelectedOutlier(outlier);
   };
 
   const closePopup = () => {
@@ -114,6 +117,23 @@ export default function TrendingPosts({ outliers }) {
       {label}
     </button>
   );
+
+  const handleInfoClick = (outlier) => {
+    const videoRef = videoRefs.current[outlier.post_id];
+    if (videoRef) {
+      setCurrentVideoTime(videoRef.currentTime);
+      if (!videoRef.paused) {
+        videoRef.pause();
+      }
+    }
+    setSelectedOutlier(outlier);
+  };
+
+  const handleOutsideClick = (e) => {
+    if (e.target.classList.contains('popup-overlay')) {
+      closePopup();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-white">
@@ -211,13 +231,16 @@ export default function TrendingPosts({ outliers }) {
 
         {/* Updated Pop-up window */}
         {selectedOutlier && (
-          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 animate-fadeIn">
-            <div className="bg-gradient-to-br from-white via-blue-50 to-purple-50 dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-5xl animate-scaleIn">
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 animate-fadeIn popup-overlay"
+            onClick={handleOutsideClick}
+          >
+            <div className="bg-gradient-to-br from-white via-blue-50 to-purple-50 dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-5xl animate-scaleIn overflow-hidden">
               <div className="flex flex-col md:flex-row">
-                <div className="w-full md:w-1/2">
+                <div className="w-full md:w-1/2 relative">
                   <video 
                     controls 
-                    className="w-full h-full object-cover rounded-l-lg"
+                    className="w-full h-full object-cover"
                     poster={selectedOutlier.cover_url}
                     ref={(el) => {
                       if (el) {
@@ -232,11 +255,11 @@ export default function TrendingPosts({ outliers }) {
                     Your browser does not support the video tag.
                   </video>
                 </div>
-                <div className="w-full md:w-1/2 p-6 bg-white bg-opacity-80 dark:bg-gray-800 dark:bg-opacity-80 rounded-r-lg">
+                <div className="w-full md:w-1/2 p-6 bg-white bg-opacity-80 dark:bg-gray-800 dark:bg-opacity-80 relative">
                   <div className="flex justify-between items-center mb-4">
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">@{selectedOutlier.owner_username}</h2>
                     <button 
-                      className="text-gray-400 hover:text-white"
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-white"
                       onClick={closePopup}
                     >
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -244,32 +267,32 @@ export default function TrendingPosts({ outliers }) {
                       </svg>
                     </button>
                   </div>
-                  <div className="flex justify-between mb-4 text-gray-700 dark:text-gray-300">
-                    <span>👁 {formatNumber(selectedOutlier.views)}</span>
-                    <span>❤️ {formatNumber(selectedOutlier.likes)}</span>
-                    <span>💬 {formatNumber(selectedOutlier.comments || 0)}</span>
+                  <div className="flex justify-between mb-4">
+                    <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-md px-2 py-1 text-center mr-2">
+                      <span className="text-gray-800 dark:text-gray-200 font-medium text-sm">
+                        👁 Views: {formatNumber(selectedOutlier.views)}
+                      </span>
+                    </div>
+                    <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-md px-2 py-1 text-center ml-2">
+                      <span className="text-gray-800 dark:text-gray-200 font-medium text-sm">
+                        ❤️ Likes: {formatNumber(selectedOutlier.likes)}
+                      </span>
+                    </div>
                   </div>
                   <p className="mb-4 text-gray-700 dark:text-gray-300">{selectedOutlier.caption}</p>
-                  <a 
-                    href={selectedOutlier.link} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="text-blue-400 hover:underline block mb-4"
-                  >
-                    Instagram Post
-                  </a>
-                  <button className="w-full bg-white text-gray-900 font-bold py-2 px-4 rounded mb-2">
-                    User Profile and Posts
-                  </button>
-                  <button className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
-                    Add to Database
-                  </button>
-                  <div className="mt-4 text-gray-700 dark:text-gray-300">
-                    <h3 className="font-bold mb-2">User Stats</h3>
-                    <p>Username: {selectedOutlier.owner_username}</p>
-                    <p>Follower Count: {formatNumber(selectedOutlier.follower_count || 0)}</p>
-                    <p>14-Day Avg View Count: {formatNumber(selectedOutlier.avg_view_count || 0)}</p>
-                    <p>Avg Like Count: {formatNumber(selectedOutlier.avg_like_count || 0)}</p>
+                  <div className="bg-blue-500 dark:bg-blue-600 text-white rounded-md px-2 py-1 text-center inline-block">
+                    <span className="font-bold text-sm">{selectedOutlier.outlier_score.toFixed(1)}x</span>
+                  </div>
+                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    Posted on: {formatDate(selectedOutlier.timestamp)}
+                  </div>
+                  {/* Cover photo */}
+                  <div className="absolute bottom-6 left-6 w-1/3 aspect-w-1 aspect-h-1 rounded-lg overflow-hidden shadow-md">
+                    <img 
+                      src={selectedOutlier.cover_url} 
+                      alt="Cover" 
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                 </div>
               </div>

@@ -29,23 +29,40 @@ const formatDate = (timestamp) => {
 export default function TrendingPosts({ outliers }) {
   const videoRefs = useRef({});
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [sortedOutliers, setSortedOutliers] = useState(outliers);
   const [sortBy, setSortBy] = useState('viralScore');
-  const [timeframe, setTimeframe] = useState(30); // Default to 30 days (1M)
+  const [timeframe, setTimeframe] = useState(30); // Default to 30 days (1M) 
   const [selectedOutlier, setSelectedOutlier] = useState(null);
   const [currentVideoTime, setCurrentVideoTime] = useState(0);
+  const [minViews, setMinViews] = useState(25000);
+  const [minLikes, setMinLikes] = useState(1000);
+  const [minViralScore, setMinViralScore] = useState(5);
+
+  const pauseAllVideos = () => {
+    Object.values(videoRefs.current).forEach((videoRef) => {
+      if (videoRef && !videoRef.paused) {
+        videoRef.pause();
+      }
+    });
+  };
 
   useEffect(() => {
+    setMounted(true);
     setTheme('dark'); // Set dark theme by default
   }, [setTheme]);
 
   useEffect(() => {
     const sortAndFilterOutliers = () => {
+      pauseAllVideos();
       const now = new Date();
       const filtered = outliers.filter(outlier => {
         const postDate = new Date(outlier.timestamp);
         const daysDifference = (now - postDate) / (1000 * 60 * 60 * 24);
-        return daysDifference <= timeframe;
+        return daysDifference <= timeframe &&
+               outlier.views >= minViews &&
+               outlier.likes >= minLikes &&
+               outlier.outlier_score >= minViralScore;
       });
 
       const sorted = filtered.sort((a, b) => {
@@ -68,7 +85,7 @@ export default function TrendingPosts({ outliers }) {
     };
 
     sortAndFilterOutliers();
-  }, [sortBy, outliers, timeframe]);
+  }, [sortBy, outliers, timeframe, minViews, minLikes, minViralScore]);
 
   useEffect(() => {
     const handleEscapeKey = (event) => {
@@ -84,6 +101,22 @@ export default function TrendingPosts({ outliers }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (selectedOutlier) {
+      const captionBubble = document.querySelector('.caption-bubble');
+      const captionText = document.querySelector('.caption-text');
+      const moreButton = document.querySelector('.more-button');
+
+      if (captionText.scrollHeight > captionBubble.clientHeight) {
+        moreButton.classList.add('visible');
+        moreButton.addEventListener('click', () => {
+          captionBubble.classList.toggle('expanded');
+          moreButton.textContent = captionBubble.classList.contains('expanded') ? 'Less' : 'More';
+        });
+      }
+    }
+  }, [selectedOutlier]);
+
   const handlePlay = (postId) => {
     Object.entries(videoRefs.current).forEach(([key, videoRef]) => {
       if (key !== postId && videoRef && !videoRef.paused) {
@@ -93,11 +126,28 @@ export default function TrendingPosts({ outliers }) {
   };
 
   const handleSortChange = (e) => {
+    pauseAllVideos();
     setSortBy(e.target.value);
   };
 
   const handleTimeframeChange = (days) => {
+    pauseAllVideos();
     setTimeframe(days);
+  };
+
+  const handleMinViewsChange = (e) => {
+    pauseAllVideos();
+    setMinViews(parseInt(e.target.value));
+  };
+
+  const handleMinLikesChange = (e) => {
+    pauseAllVideos();
+    setMinLikes(parseInt(e.target.value));
+  };
+
+  const handleMinViralScoreChange = (e) => {
+    pauseAllVideos();
+    setMinViralScore(parseFloat(e.target.value));
   };
 
   const closePopup = () => {
@@ -108,10 +158,10 @@ export default function TrendingPosts({ outliers }) {
   const TimeframeButton = ({ days, label }) => (
     <button
       onClick={() => handleTimeframeChange(days)}
-      className={`px-3 py-1 rounded-md text-sm font-medium mr-2 ${
+      className={`px-3 py-1 rounded-md text-sm font-medium transition-colors duration-200 ${
         timeframe === days
-          ? 'bg-blue-400 text-white'
-          : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+          ? styles.selectedTimeframe
+          : 'bg-white text-black hover:bg-gray-100'
       }`}
     >
       {label}
@@ -139,8 +189,11 @@ export default function TrendingPosts({ outliers }) {
     }
   };
 
+  // Render a loader or nothing until the component has mounted
+  if (!mounted) return null;
+
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-white">
+    <div className={`min-h-screen ${theme === 'dark' ? 'bg-black' : 'bg-white'} text-gray-800 dark:text-white`}>
       <Head>
         <title>Viral Brain - Trending Posts</title>
         <meta name="description" content="Trending viral content outliers" />
@@ -149,35 +202,82 @@ export default function TrendingPosts({ outliers }) {
 
       <MenuBar />
 
-      <main className={`container mx-auto px-4 py-8 ${selectedOutlier ? 'blur-sm' : ''}`}>
-        <div className="mb-6 flex flex-wrap justify-between items-center">
-          <div className="flex items-center mb-2 sm:mb-0">
-            <TimeframeButton days={7} label="Last 7D" />
-            <TimeframeButton days={14} label="Last 14D" />
-            <TimeframeButton days={30} label="Last 1M" />
-            <TimeframeButton days={90} label="Last 3M" />
-          </div>
-          <div className="relative">
-            <select
-              className="appearance-none bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              value={sortBy}
-              onChange={handleSortChange}
-            >
-              <option value="viralScore">Sort by Viral Score</option>
-              <option value="postDate">Sort by Post Date (Newest)</option>
-              <option value="views">Sort by Views</option>
-              <option value="likes">Sort by Likes</option>
-              <option value="username">Sort by Username</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-300">
-              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-              </svg>
+      <main className={`container mx-auto px-4 pt-24 ${selectedOutlier ? 'blur-sm' : ''}`}>
+        <div className={`mb-4 rounded-lg p-4 relative overflow-hidden ${styles['colorful-bg']}`}>
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex space-x-2">
+              <TimeframeButton days={7} label="Last 7D" />
+              <TimeframeButton days={14} label="Last 14D" />
+              <TimeframeButton days={30} label="Last 1M" />
+              <TimeframeButton days={90} label="Last 3M" />
+            </div>
+            <div className="flex-1 flex items-center space-x-4">
+              <div className="flex-1">
+                <label htmlFor="min-views" className="block text-sm font-medium text-white mb-1">
+                  Min Views: {formatNumber(minViews)}+
+                </label>
+                <input
+                  type="range"
+                  id="min-views"
+                  min="25000"
+                  max="1000000"
+                  step="1000"
+                  value={minViews}
+                  onChange={handleMinViewsChange}
+                  className="w-full accent-white"
+                  style={{background: 'white'}}
+                />
+              </div>
+              <div className="flex-1">
+                <label htmlFor="min-likes" className="block text-sm font-medium text-white mb-1">
+                  Min Likes: {formatNumber(minLikes)}+
+                </label>
+                <input
+                  type="range"
+                  id="min-likes"
+                  min="1000"
+                  max="100000"
+                  step="100"
+                  value={minLikes}
+                  onChange={handleMinLikesChange}
+                  className="w-full accent-white"
+                  style={{background: 'white'}}
+                />
+              </div>
+              <div className="flex-1">
+                <label htmlFor="min-viral-score" className="block text-sm font-medium text-white mb-1">
+                  Min Viral Score: {minViralScore.toFixed(1)}x+
+                </label>
+                <input
+                  type="range"
+                  id="min-viral-score"
+                  min="5"
+                  max="100"
+                  step="0.1"
+                  value={minViralScore}
+                  onChange={handleMinViralScoreChange}
+                  className="w-full accent-white"
+                  style={{background: 'white'}}
+                />
+              </div>
+            </div>
+            <div className="flex-none">
+              <select
+                value={sortBy}
+                onChange={handleSortChange}
+                className="bg-white text-black rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:ring-offset-2 focus:ring-offset-gray-800"
+              >
+                <option value="viralScore">Sort by Viral Score</option>
+                <option value="views">Sort by Views</option>
+                <option value="likes">Sort by Likes</option>
+                <option value="postDate">Sort by Post Date</option>
+                <option value="username">Sort by Username</option>
+              </select>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-4">
           {sortedOutliers.map((outlier) => (
             <div key={outlier.post_id} className={`${styles.videoCard} bg-gray-100 dark:bg-gray-800 rounded-lg shadow-md overflow-hidden`}>
               <div className="relative w-full pt-[177.78%]">
@@ -251,7 +351,7 @@ export default function TrendingPosts({ outliers }) {
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn popup-overlay"
           onClick={handleOutsideClick}
         >
-          <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-5xl animate-scaleIn overflow-hidden shadow-blue-glow">
+          <div className="bg-white dark:bg-black rounded-lg w-full max-w-5xl animate-scaleIn overflow-hidden shadow-blue-glow">
             <div className="flex flex-col md:flex-row">
               <div className="w-full md:w-1/2 relative">
                 <video 
@@ -271,9 +371,12 @@ export default function TrendingPosts({ outliers }) {
                   Your browser does not support the video tag.
                 </video>
               </div>
-              <div className="w-full md:w-1/2 p-6 bg-white dark:bg-gray-800 relative">
+              <div className="w-full md:w-1/2 p-6 bg-white dark:bg-black relative">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white">@{selectedOutlier.owner_username}</h2>
+                  <div className="bg-gray-600 text-white text-sm font-semibold px-3 py-1.5 rounded-md ml-auto mr-8">
+                    {formatDate(selectedOutlier.timestamp)}
+                  </div>
                   <button 
                     className="text-gray-400 hover:text-gray-600 dark:hover:text-white"
                     onClick={closePopup}
@@ -283,27 +386,39 @@ export default function TrendingPosts({ outliers }) {
                     </svg>
                   </button>
                 </div>
-                <div className="flex justify-between mb-4">
-                  <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-md px-2 py-1 text-center mr-2">
-                    <span className="text-gray-800 dark:text-gray-200 font-medium text-sm">
-                      👁 Views: {formatNumber(selectedOutlier.views)}
-                    </span>
+                <div className="flex justify-between space-x-2 mb-4">
+                  <div className="flex-1 bg-purple-600 text-white rounded-lg px-2 py-1 text-center">
+                    <span className="text-xs uppercase font-semibold">Viral Score</span>
+                    <div className="text-lg font-bold">{selectedOutlier.outlier_score.toFixed(1)}x</div>
                   </div>
-                  <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-md px-2 py-1 text-center ml-2">
-                    <span className="text-gray-800 dark:text-gray-200 font-medium text-sm">
-                      ❤️ Likes: {formatNumber(selectedOutlier.likes)}
-                    </span>
+                  <div className="flex-1 bg-green-500 text-white rounded-lg px-2 py-1 text-center">
+                    <span className="text-xs uppercase font-semibold">VIEWS</span>
+                    <div className="text-lg font-bold">{formatNumber(selectedOutlier.views)}</div>
+                  </div>
+                  <div className="flex-1 bg-blue-700 text-white rounded-lg px-2 py-1 text-center">
+                    <span className="text-xs uppercase font-semibold">LIKES</span>
+                    <div className="text-lg font-bold">{formatNumber(selectedOutlier.likes)}</div>
                   </div>
                 </div>
-                <p className="mb-4 text-gray-700 dark:text-gray-300">{selectedOutlier.caption}</p>
-                <div className="bg-blue-500 dark:bg-blue-600 text-white rounded-md px-2 py-1 text-center inline-block">
-                  <span className="font-bold text-sm">{selectedOutlier.outlier_score.toFixed(1)}x</span>
+                <div className="mb-4 relative">
+                  <div className="bg-gray-200 dark:bg-gray-700 rounded-lg p-3 caption-bubble">
+                    <p className="text-gray-700 dark:text-gray-300 caption-text">{selectedOutlier.caption}</p>
+                  </div>
+                  <button className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 mt-1 text-sm more-button hidden">
+                    More
+                  </button>
                 </div>
-                <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                  Posted on: {formatDate(selectedOutlier.timestamp)}
+                <div className="mb-4">
+                  <a
+                    href={selectedOutlier.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full inline-block transition-colors duration-200"
+                  >
+                    View Post
+                  </a>
                 </div>
-                {/* Cover photo */}
-                <div className="absolute bottom-6 left-6 w-1/3 aspect-w-1 aspect-h-1 rounded-lg overflow-hidden shadow-md">
+                <div className="absolute bottom-6 left-6 w-1/2 aspect-w-9 aspect-h-16 rounded-lg overflow-hidden shadow-md">
                   <img 
                     src={selectedOutlier.cover_url} 
                     alt="Cover" 
@@ -347,7 +462,7 @@ export async function getServerSideProps() {
       views: parseInt(row.video_play_count),
       likes: parseInt(row.likes_count),
       caption: row.caption,
-      link: row.url,
+      link: row.url, // Make sure this is included
       timestamp: row.timestamp ? row.timestamp.toISOString() : null
     }));
 

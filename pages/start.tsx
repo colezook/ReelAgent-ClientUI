@@ -2,14 +2,25 @@ import Head from "next/head";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import MenuBar from "../src/components/MenuBar";
+import type { NextPage } from 'next';
+import { useState, useEffect } from 'react';
 
-export default function Start() {
+const Start: NextPage = () => {
   const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div className="min-h-screen bg-white text-gray-800 dark:text-white">
+      {/* Initial render content */}
+    </div>;
+  }
 
   return (
-    <div
-      className={`min-h-screen ${theme === "dark" ? "bg-black" : "bg-white"} text-gray-800 dark:text-white`}
-    >
+    <div className={`min-h-screen ${theme === "dark" ? "bg-black" : "bg-white"} text-gray-800 dark:text-white`}>
       <Head>
         <title>Viral Brain - Start</title>
         <meta name="description" content="Welcome to Reel Agent" />
@@ -45,4 +56,6 @@ export default function Start() {
       </footer>
     </div>
   );
-}
+};
+
+export default Start;

@@ -4,17 +4,18 @@ import { useTheme } from 'next-themes';
 import { Sun, Moon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import styles from '../../styles/Home.module.css';
+import { MenuBarProps } from '../types';
 
-const MenuBar = () => {
+const MenuBar: React.FC<MenuBarProps> = () => {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
-  const isActive = (pathname) => router.pathname === pathname;
+  const isActive = (pathname: string): boolean => router.pathname === pathname;
 
-  const linkClass = (pathname) => `
+  const linkClass = (pathname: string): string => `
     px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200
     ${isActive(pathname)
       ? 'bg-purple-700 text-white'
@@ -64,4 +65,4 @@ const MenuBar = () => {
   );
 };
 
-export default MenuBar;
+export default MenuBar; 

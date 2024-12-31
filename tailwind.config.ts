@@ -1,4 +1,6 @@
-module.exports = {
+import type { Config } from 'tailwindcss';
+
+const config: Config = {
   content: [
     "./pages/**/*.{js,ts,jsx,tsx}",
     "./src/components/**/*.{js,ts,jsx,tsx}",
@@ -45,7 +47,7 @@ module.exports = {
         'scaleIn': 'scaleIn 0.3s ease-out',
       },
       boxShadow: {
-        'blue-glow': '0 0 20px 7px rgba(59, 130, 246, 0.8)', // Reduced size by 50%
+        'blue-glow': '0 0 20px 7px rgba(59, 130, 246, 0.8)',
       },
       borderWidth: {
         '3': '3px',
@@ -55,7 +57,7 @@ module.exports = {
         '102': '1.02',
       },
       maxWidth: {
-        '4xl': '56rem', // Adjusted to better fit the popup
+        '4xl': '56rem',
       },
       backdropBlur: {
         sm: '4px',
@@ -69,4 +71,6 @@ module.exports = {
     },
   },
   plugins: [],
-}
+} as const;
+
+export default config; 
